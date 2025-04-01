@@ -39,6 +39,19 @@ public class QueryController {
         model.addAttribute("results", List.of());
         return "query/index";
     }
+    
+    /**
+     * Displays the advanced query page.
+     *
+     * @param model The model
+     * @return The advanced query page
+     */
+    @GetMapping("/advanced")
+    public String advancedQueryPage(Model model) {
+        model.addAttribute("filters", Map.of());
+        model.addAttribute("results", List.of());
+        return "query/advanced";
+    }
 
     /**
      * Handles query execution.
