@@ -43,36 +43,55 @@ public class SchemaServiceTest {
 
     @Test
     public void testValidateMessage_ValidMessage() {
-        String message = "{\"id\":\"123\",\"name\":\"John Doe\",\"age\":30,\"active\":true,\"timestamp\":\"2025-01-01T12:00:00Z\"}";
+        Map<String, Object> message = new HashMap<>();
+        message.put("id", "123");
+        message.put("name", "John Doe");
+        message.put("age", 30);
+        message.put("active", true);
+        message.put("timestamp", "2025-01-01T12:00:00Z");
         
-        boolean isValid = schemaService.validateMessage(message, testSchema);
+        schemaService.setCurrentSchema(testSchema);
+        
+        boolean isValid = schemaService.validateMessage(message);
         
         assertTrue(isValid, "Valid message should be validated successfully");
     }
 
     @Test
     public void testValidateMessage_InvalidMessage_MissingRequiredField() {
-        String message = "{\"id\":\"123\",\"name\":\"John Doe\",\"active\":true,\"timestamp\":\"2025-01-01T12:00:00Z\"}";
+        Map<String, Object> message = new HashMap<>();
+        message.put("id", "123");
+        message.put("name", "John Doe");
+        message.put("active", true);
+        message.put("timestamp", "2025-01-01T12:00:00Z");
         
-        boolean isValid = schemaService.validateMessage(message, testSchema);
+        schemaService.setCurrentSchema(testSchema);
+        boolean isValid = schemaService.validateMessage(message);
         
         assertFalse(isValid, "Message missing required field should be invalid");
     }
 
     @Test
     public void testValidateMessage_InvalidMessage_WrongType() {
-        String message = "{\"id\":\"123\",\"name\":\"John Doe\",\"age\":\"thirty\",\"active\":true,\"timestamp\":\"2025-01-01T12:00:00Z\"}";
+        Map<String, Object> message = new HashMap<>();
+        message.put("id", "123");
+        message.put("name", "John Doe");
+        message.put("age", "thirty"); // Wrong type, should be integer
+        message.put("active", true);
+        message.put("timestamp", "2025-01-01T12:00:00Z");
         
-        boolean isValid = schemaService.validateMessage(message, testSchema);
+        schemaService.setCurrentSchema(testSchema);
+        boolean isValid = schemaService.validateMessage(message);
         
         assertFalse(isValid, "Message with wrong type should be invalid");
     }
 
     @Test
     public void testValidateMessage_InvalidJson() {
-        String message = "{\"id\":\"123\",\"name\":\"John Doe\",\"age\":30,\"active\":true,\"timestamp\":\"2025-01-01T12:00:00Z\"";
+        String invalidJson = "{\"id\":\"123\",\"name\":\"John Doe\",\"age\":30,\"active\":true,\"timestamp\":\"2025-01-01T12:00:00Z\"";
         
-        boolean isValid = schemaService.validateMessage(message, testSchema);
+        schemaService.setCurrentSchema(testSchema);
+        boolean isValid = schemaService.validateMessage(invalidJson);
         
         assertFalse(isValid, "Invalid JSON should be invalid");
     }

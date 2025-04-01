@@ -36,11 +36,17 @@ public class ErrorProducerTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         
-        errorProducer.setErrorTopic(errorTopic);
+        try {
+            java.lang.reflect.Field field = ErrorProducer.class.getDeclaredField("errorTopic");
+            field.setAccessible(true);
+            field.set(errorProducer, errorTopic);
+        } catch (Exception e) {
+            fail("Failed to set errorTopic field: " + e.getMessage());
+        }
     }
 
     @Test
-    public void testSendToErrorQueue_Success() {
+    public void testSendErrorMessage_Success() {
         RecordMetadata recordMetadata = new RecordMetadata(
                 new TopicPartition(errorTopic, 0),
                 0,
@@ -54,7 +60,7 @@ public class ErrorProducerTest {
         Future<RecordMetadata> future = CompletableFuture.completedFuture(recordMetadata);
         when(kafkaProducer.send(any(ProducerRecord.class))).thenReturn(future);
         
-        boolean result = errorProducer.sendToErrorQueue(testMessage, errorReason);
+        boolean result = errorProducer.sendErrorMessage(testMessage, errorReason);
         
         assertTrue(result, "Message should be sent to error queue successfully");
         
@@ -62,10 +68,10 @@ public class ErrorProducerTest {
     }
 
     @Test
-    public void testSendToErrorQueue_Exception() {
+    public void testSendErrorMessage_Exception() {
         when(kafkaProducer.send(any(ProducerRecord.class))).thenThrow(new RuntimeException("Test exception"));
         
-        boolean result = errorProducer.sendToErrorQueue(testMessage, errorReason);
+        boolean result = errorProducer.sendErrorMessage(testMessage, errorReason);
         
         assertFalse(result, "Message should not be sent to error queue when an exception occurs");
         
@@ -73,8 +79,8 @@ public class ErrorProducerTest {
     }
 
     @Test
-    public void testSendToErrorQueue_NullMessage() {
-        boolean result = errorProducer.sendToErrorQueue(null, errorReason);
+    public void testSendErrorMessage_NullMessage() {
+        boolean result = errorProducer.sendErrorMessage(null, errorReason);
         
         assertFalse(result, "Null message should not be sent to error queue");
         
@@ -82,8 +88,8 @@ public class ErrorProducerTest {
     }
 
     @Test
-    public void testSendToErrorQueue_EmptyMessage() {
-        boolean result = errorProducer.sendToErrorQueue("", errorReason);
+    public void testSendErrorMessage_EmptyMessage() {
+        boolean result = errorProducer.sendErrorMessage("", errorReason);
         
         assertFalse(result, "Empty message should not be sent to error queue");
         
@@ -91,8 +97,8 @@ public class ErrorProducerTest {
     }
 
     @Test
-    public void testSendToErrorQueue_NullReason() {
-        boolean result = errorProducer.sendToErrorQueue(testMessage, null);
+    public void testSendErrorMessage_NullReason() {
+        boolean result = errorProducer.sendErrorMessage(testMessage, null);
         
         assertTrue(result, "Message with null reason should still be sent to error queue");
         
@@ -100,8 +106,8 @@ public class ErrorProducerTest {
     }
 
     @Test
-    public void testSendToErrorQueue_EmptyReason() {
-        boolean result = errorProducer.sendToErrorQueue(testMessage, "");
+    public void testSendErrorMessage_EmptyReason() {
+        boolean result = errorProducer.sendErrorMessage(testMessage, "");
         
         assertTrue(result, "Message with empty reason should still be sent to error queue");
         

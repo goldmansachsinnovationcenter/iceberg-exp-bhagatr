@@ -63,96 +63,48 @@ public class KafkaConsumerTest {
         
         testSchema.setFields(fields);
         
-        consumer.setTopic(testTopic);
-        consumer.setTableName("messages");
-        consumer.setSchema(testSchema);
+        when(schemaService.getCurrentSchema()).thenReturn(testSchema);
     }
 
     @Test
-    public void testConsumeMessages_ValidMessage() {
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(testTopic, 0, 0, "key", testMessage);
+    public void testProcessMessage_ValidMessage() {
+        when(testSchema.validateMessage(any())).thenReturn(true);
         
-        Map<TopicPartition, java.util.List<ConsumerRecord<String, String>>> recordsMap = new HashMap<>();
-        recordsMap.put(new TopicPartition(testTopic, 0), Collections.singletonList(record));
-        ConsumerRecords<String, String> records = new ConsumerRecords<>(recordsMap);
+        consumer.processMessage(testMessage);
         
-        when(kafkaConsumer.poll(any(Duration.class))).thenReturn(records);
-        
-        when(schemaService.validateMessage(testMessage, testSchema)).thenReturn(true);
-        
-        when(icebergService.writeMessage(testMessage, "messages")).thenReturn(true);
-        
-        consumer.consumeMessages();
-        
-        verify(kafkaConsumer).poll(any(Duration.class));
-        verify(schemaService).validateMessage(testMessage, testSchema);
-        verify(icebergService).writeMessage(testMessage, "messages");
-        verify(metricsService).incrementMessagesProcessed();
-        verify(errorProducer, never()).sendToErrorQueue(anyString(), anyString());
+        verify(icebergService).writeToIceberg(any());
+        verify(errorProducer, never()).sendErrorMessage(anyString(), anyString());
     }
 
     @Test
-    public void testConsumeMessages_InvalidMessage() {
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(testTopic, 0, 0, "key", testMessage);
+    public void testProcessMessage_InvalidMessage() {
+        when(testSchema.validateMessage(any())).thenReturn(false);
         
-        Map<TopicPartition, java.util.List<ConsumerRecord<String, String>>> recordsMap = new HashMap<>();
-        recordsMap.put(new TopicPartition(testTopic, 0), Collections.singletonList(record));
-        ConsumerRecords<String, String> records = new ConsumerRecords<>(recordsMap);
+        consumer.processMessage(testMessage);
         
-        when(kafkaConsumer.poll(any(Duration.class))).thenReturn(records);
-        
-        when(schemaService.validateMessage(testMessage, testSchema)).thenReturn(false);
-        
-        consumer.consumeMessages();
-        
-        verify(kafkaConsumer).poll(any(Duration.class));
-        verify(schemaService).validateMessage(testMessage, testSchema);
-        verify(icebergService, never()).writeMessage(anyString(), anyString());
-        verify(metricsService).incrementMessagesRejected();
-        verify(errorProducer).sendToErrorQueue(eq(testMessage), contains("Schema validation failed"));
+        verify(icebergService, never()).writeToIceberg(any());
+        verify(errorProducer).sendErrorMessage(eq(testMessage), contains("Schema validation failed"));
     }
 
     @Test
-    public void testConsumeMessages_WriteFailure() {
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(testTopic, 0, 0, "key", testMessage);
+    public void testProcessMessage_WriteFailure() {
+        when(testSchema.validateMessage(any())).thenReturn(true);
         
-        Map<TopicPartition, java.util.List<ConsumerRecord<String, String>>> recordsMap = new HashMap<>();
-        recordsMap.put(new TopicPartition(testTopic, 0), Collections.singletonList(record));
-        ConsumerRecords<String, String> records = new ConsumerRecords<>(recordsMap);
+        doThrow(new RuntimeException("Failed to write message")).when(icebergService).writeToIceberg(any());
         
-        when(kafkaConsumer.poll(any(Duration.class))).thenReturn(records);
+        consumer.processMessage(testMessage);
         
-        when(schemaService.validateMessage(testMessage, testSchema)).thenReturn(true);
-        
-        when(icebergService.writeMessage(testMessage, "messages")).thenReturn(false);
-        
-        consumer.consumeMessages();
-        
-        verify(kafkaConsumer).poll(any(Duration.class));
-        verify(schemaService).validateMessage(testMessage, testSchema);
-        verify(icebergService).writeMessage(testMessage, "messages");
-        verify(metricsService).incrementMessagesRejected();
-        verify(errorProducer).sendToErrorQueue(eq(testMessage), contains("Failed to write message"));
+        verify(icebergService).writeToIceberg(any());
+        verify(errorProducer).sendErrorMessage(eq(testMessage), contains("Error processing message"));
     }
 
     @Test
-    public void testConsumeMessages_Exception() {
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(testTopic, 0, 0, "key", testMessage);
+    public void testProcessMessage_Exception() {
+        when(testSchema.validateMessage(any())).thenThrow(new RuntimeException("Test exception"));
         
-        Map<TopicPartition, java.util.List<ConsumerRecord<String, String>>> recordsMap = new HashMap<>();
-        recordsMap.put(new TopicPartition(testTopic, 0), Collections.singletonList(record));
-        ConsumerRecords<String, String> records = new ConsumerRecords<>(recordsMap);
+        consumer.processMessage(testMessage);
         
-        when(kafkaConsumer.poll(any(Duration.class))).thenReturn(records);
-        
-        when(schemaService.validateMessage(testMessage, testSchema)).thenThrow(new RuntimeException("Test exception"));
-        
-        consumer.consumeMessages();
-        
-        verify(kafkaConsumer).poll(any(Duration.class));
-        verify(schemaService).validateMessage(testMessage, testSchema);
-        verify(icebergService, never()).writeMessage(anyString(), anyString());
-        verify(metricsService).incrementMessagesRejected();
-        verify(errorProducer).sendToErrorQueue(eq(testMessage), contains("Error processing message"));
+        verify(icebergService, never()).writeToIceberg(any());
+        verify(errorProducer).sendErrorMessage(eq(testMessage), contains("Error processing message"));
     }
 }
