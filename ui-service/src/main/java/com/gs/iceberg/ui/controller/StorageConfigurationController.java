@@ -60,6 +60,9 @@ public class StorageConfigurationController {
      */
     @PostMapping("/create")
     public String createConfiguration(@ModelAttribute StorageConfiguration configuration) {
+        if (configuration.isActive()) {
+            storageConfigurationService.deactivateAllConfigurations();
+        }
         storageConfigurationService.createConfiguration(configuration);
         return "redirect:/storage-configs";
     }
@@ -88,6 +91,9 @@ public class StorageConfigurationController {
      */
     @PostMapping("/edit/{id}")
     public String updateConfiguration(@PathVariable Long id, @ModelAttribute StorageConfiguration configuration) {
+        if (configuration.isActive()) {
+            storageConfigurationService.deactivateAllConfigurations();
+        }
         storageConfigurationService.updateConfiguration(id, configuration);
         return "redirect:/storage-configs";
     }
@@ -101,6 +107,31 @@ public class StorageConfigurationController {
     @GetMapping("/delete/{id}")
     public String deleteConfiguration(@PathVariable Long id) {
         storageConfigurationService.deleteConfiguration(id);
+        return "redirect:/storage-configs";
+    }
+    
+    /**
+     * Activates a storage configuration.
+     *
+     * @param id The ID of the storage configuration to activate
+     * @return Redirect to the storage configuration list page
+     */
+    @GetMapping("/activate/{id}")
+    public String activateConfiguration(@PathVariable Long id) {
+        log.info("Activating storage configuration with ID: {}", id);
+        storageConfigurationService.activateConfiguration(id);
+        return "redirect:/storage-configs";
+    }
+    
+    /**
+     * Applies the active storage configuration to the application.
+     *
+     * @return Redirect to the storage configuration list page
+     */
+    @GetMapping("/apply-active")
+    public String applyActiveConfiguration() {
+        log.info("Applying active storage configuration");
+        storageConfigurationService.applyActiveConfiguration();
         return "redirect:/storage-configs";
     }
 
@@ -139,6 +170,9 @@ public class StorageConfigurationController {
     @PostMapping("/api")
     @ResponseBody
     public ResponseEntity<StorageConfiguration> createConfigurationApi(@RequestBody StorageConfiguration configuration) {
+        if (configuration.isActive()) {
+            storageConfigurationService.deactivateAllConfigurations();
+        }
         StorageConfiguration createdConfiguration = storageConfigurationService.createConfiguration(configuration);
         return new ResponseEntity<>(createdConfiguration, HttpStatus.CREATED);
     }
@@ -153,6 +187,9 @@ public class StorageConfigurationController {
     @PutMapping("/api/{id}")
     @ResponseBody
     public ResponseEntity<StorageConfiguration> updateConfigurationApi(@PathVariable Long id, @RequestBody StorageConfiguration configuration) {
+        if (configuration.isActive()) {
+            storageConfigurationService.deactivateAllConfigurations();
+        }
         return storageConfigurationService.updateConfiguration(id, configuration)
                 .map(updatedConfiguration -> new ResponseEntity<>(updatedConfiguration, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
@@ -169,5 +206,35 @@ public class StorageConfigurationController {
     public ResponseEntity<Void> deleteConfigurationApi(@PathVariable Long id) {
         storageConfigurationService.deleteConfiguration(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+    /**
+     * REST API for activating a storage configuration.
+     *
+     * @param id The ID of the storage configuration to activate
+     * @return The activated storage configuration
+     */
+    @PostMapping("/api/{id}/activate")
+    @ResponseBody
+    public ResponseEntity<StorageConfiguration> activateConfigurationApi(@PathVariable Long id) {
+        return storageConfigurationService.activateConfiguration(id)
+                .map(activatedConfiguration -> new ResponseEntity<>(activatedConfiguration, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+    
+    /**
+     * REST API for applying the active storage configuration.
+     *
+     * @return Success message
+     */
+    @PostMapping("/api/apply-active")
+    @ResponseBody
+    public ResponseEntity<String> applyActiveConfigurationApi() {
+        boolean success = storageConfigurationService.applyActiveConfiguration();
+        if (success) {
+            return new ResponseEntity<>("Active storage configuration applied successfully", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("No active storage configuration found", HttpStatus.NOT_FOUND);
+        }
     }
 }

@@ -19,4 +19,11 @@ public interface StorageConfigurationRepository extends JpaRepository<StorageCon
      * @return The storage configuration, if found
      */
     Optional<StorageConfiguration> findByName(String name);
+    
+    /**
+     * Finds the active storage configuration.
+     *
+     * @return The active storage configuration, if found
+     */
+    Optional<StorageConfiguration> findByActiveTrue();
 }

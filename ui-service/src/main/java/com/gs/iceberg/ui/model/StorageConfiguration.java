@@ -46,6 +46,9 @@ public class StorageConfiguration {
     private String secretKey;
 
     private String region;
+    
+    @Column(nullable = false)
+    private boolean active = false;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -85,5 +88,16 @@ public class StorageConfiguration {
     public void removeMetric(Metric metric) {
         metrics.remove(metric);
         metric.setStorageConfiguration(null);
+    }
+    
+    /**
+     * Returns the storage path based on the configured type.
+     */
+    public String getStoragePath() {
+        if ("S3".equalsIgnoreCase(storageType)) {
+            return "s3a://" + basePath;
+        } else {
+            return "hdfs://" + basePath;
+        }
     }
 }

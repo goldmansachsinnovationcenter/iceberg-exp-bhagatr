@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Storage Configuration - Kafka-Iceberg Application</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <nav class="blue darken-3">
+        <div class="nav-wrapper container">
+            <a href="#" class="brand-logo">Kafka-Iceberg</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <li><a th:href="@{/}">Home</a></li>
+                <li><a th:href="@{/schemas}">Message Schemas</a></li>
+                <li><a th:href="@{/kafka-configs}">Kafka Configs</a></li>
+                <li class="active"><a th:href="@{/storage-configs}">Storage Configs</a></li>
+                <li><a th:href="@{/query}">Query</a></li>
+                <li><a th:href="@{/error-messages}">Error Queue</a></li>
+                <li><a th:href="@{/metrics}">Metrics</a></li>
+                <li><a th:href="@{/metrics/slo}">SLO/SLIs</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="section">
+            <h3 class="center-align">Create Storage Configuration</h3>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Create Storage Configuration</span>
+                            <form th:action="@{/storage-configs/create}" method="post" th:object="${configuration}">
+                                <div class="row">
+                                    <div class="input-field col s12">
+                                        <input id="name" name="name" type="text" class="validate" required>
+                                        <label for="name">Name</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12">
+                                        <select id="storageType" name="storageType" class="validate" required>
+                                            <option value="" disabled selected>Choose storage type</option>
+                                            <option value="HDFS">HDFS</option>
+                                            <option value="S3">S3</option>
+                                        </select>
+                                        <label for="storageType">Storage Type</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12">
+                                        <input id="basePath" name="basePath" type="text" class="validate" required>
+                                        <label for="basePath">Base Path</label>
+                                        <span class="helper-text">For HDFS: localhost:9000/iceberg, For S3: bucket-name/path</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12">
+                                        <input id="retentionDays" name="retentionDays" type="number" class="validate" value="10" min="1" required>
+                                        <label for="retentionDays">Retention Days</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- HDFS Configuration -->
+                                <div class="hdfs-config">
+                                    <h5>HDFS Configuration</h5>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <input id="keytabPath" name="keytabPath" type="text" class="validate">
+                                            <label for="keytabPath">Keytab Path</label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <input id="principal" name="principal" type="text" class="validate">
+                                            <label for="principal">Principal</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- S3 Configuration -->
+                                <div class="s3-config" style="display: none;">
+                                    <h5>S3 Configuration</h5>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <input id="accessKey" name="accessKey" type="text" class="validate">
+                                            <label for="accessKey">Access Key</label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <input id="secretKey" name="secretKey" type="password" class="validate">
+                                            <label for="secretKey">Secret Key</label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <input id="region" name="region" type="text" class="validate">
+                                            <label for="region">Region</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col s12">
+                                        <div class="switch">
+                                            <label>
+                                                Inactive
+                                                <input type="checkbox" id="active" name="active">
+                                                <span class="lever"></span>
+                                                Active
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col s12">
+                                        <button class="btn waves-effect waves-light" type="submit">
+                                            <i class="material-icons left">save</i>Create
+                                        </button>
+                                        <a th:href="@{/storage-configs}" class="btn waves-effect waves-light grey">
+                                            <i class="material-icons left">arrow_back</i>Back
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer blue darken-3">
+        <div class="container">
+            <div class="row">
+                <div class="col s12">
+                    <h5 class="white-text">Kafka-Iceberg Application</h5>
+                    <p class="grey-text text-lighten-4">A tool for processing JSON messages from Kafka and storing them in HDFS/S3 using Iceberg.</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <div class="container">
+                © 2025 Goldman Sachs Innovation Center
+            </div>
+        </div>
+    </footer>
+
+    <div class="fixed-action-btn">
+        <a class="btn-floating btn-large red">
+            <i class="large material-icons">save</i>
+        </a>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('.fixed-action-btn').floatingActionButton();
+            $('select').formSelect();
+            
+            // Toggle HDFS/S3 configuration sections based on storage type
+            $('#storageType').change(function() {
+                var selectedType = $(this).val();
+                if (selectedType === 'HDFS') {
+                    $('.hdfs-config').show();
+                    $('.s3-config').hide();
+                } else if (selectedType === 'S3') {
+                    $('.hdfs-config').hide();
+                    $('.s3-config').show();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
