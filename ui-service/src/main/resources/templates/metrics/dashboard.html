@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrics Dashboard - Kafka-Iceberg Application</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <nav class="blue darken-3">
+        <div class="nav-wrapper container">
+            <a href="#" class="brand-logo">Kafka-Iceberg</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <li><a th:href="@{/}">Home</a></li>
+                <li><a th:href="@{/schemas}">Message Schemas</a></li>
+                <li><a th:href="@{/kafka-configs}">Kafka Configs</a></li>
+                <li><a th:href="@{/storage-configs}">Storage Configs</a></li>
+                <li><a th:href="@{/query}">Query</a></li>
+                <li><a th:href="@{/error-messages}">Error Queue</a></li>
+                <li class="active"><a th:href="@{/metrics}">Metrics</a></li>
+                <li><a th:href="@{/metrics/slo}">SLO/SLIs</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="section">
+            <h3 class="center-align">Metrics Dashboard</h3>
+            
+            <div class="row">
+                <div class="col s12 m4">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Kafka Lag</span>
+                            <h4 class="center-align" id="kafka-lag">0</h4>
+                            <p class="center-align">messages</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col s12 m4">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Ingestion Rate</span>
+                            <h4 class="center-align" id="ingestion-rate">0</h4>
+                            <p class="center-align">messages/minute</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col s12 m4">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Total Records</span>
+                            <h4 class="center-align" id="total-records">0</h4>
+                            <p class="center-align">records</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12 m6">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Ingestion Rate Over Time</span>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="ingestion-rate-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col s12 m6">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Kafka Lag Over Time</span>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="kafka-lag-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">Partition Lag</span>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="partition-lag-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">All Metrics</span>
+                            <div class="row" th:if="${metrics != null && !metrics.isEmpty()}">
+                                <div class="col s12">
+                                    <table class="striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Value</th>
+                                                <th>Type</th>
+                                                <th>Timestamp</th>
+                                                <th>Tags</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="metric : ${metrics}">
+                                                <td th:text="${metric.name}"></td>
+                                                <td th:text="${metric.value}"></td>
+                                                <td th:text="${metric.type}"></td>
+                                                <td th:text="${#temporals.format(metric.timestamp, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                                                <td th:text="${metric.tags}"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row" th:if="${metrics == null || metrics.isEmpty()}">
+                                <div class="col s12">
+                                    <p>No metrics found.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer blue darken-3">
+        <div class="container">
+            <div class="row">
+                <div class="col s12">
+                    <h5 class="white-text">Kafka-Iceberg Application</h5>
+                    <p class="grey-text text-lighten-4">A tool for processing JSON messages from Kafka and storing them in HDFS/S3 using Iceberg.</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <div class="container">
+                © 2025 Goldman Sachs Innovation Center
+            </div>
+        </div>
+    </footer>
+
+    <div class="fixed-action-btn">
+        <a class="btn-floating btn-large red">
+            <i class="large material-icons">refresh</i>
+        </a>
+        <ul>
+            <li><a th:href="@{/metrics}" class="btn-floating green"><i class="material-icons">refresh</i></a></li>
+            <li><a href="#" class="btn-floating blue" id="export-metrics"><i class="material-icons">file_download</i></a></li>
+        </ul>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('.fixed-action-btn').floatingActionButton();
+            
+            // Mock data for charts
+            const timestamps = Array.from({length: 10}, (_, i) => {
+                const date = new Date();
+                date.setMinutes(date.getMinutes() - (10 - i));
+                return date.toLocaleTimeString();
+            });
+            
+            const ingestionRates = [45, 52, 48, 60, 55, 58, 62, 65, 70, 68];
+            const kafkaLags = [10, 15, 12, 8, 5, 7, 3, 2, 1, 0];
+            const partitions = ['Partition 0', 'Partition 1', 'Partition 2'];
+            const partitionLags = [5, 3, 2];
+            
+            // Update metrics
+            $('#kafka-lag').text(kafkaLags[kafkaLags.length - 1]);
+            $('#ingestion-rate').text(ingestionRates[ingestionRates.length - 1]);
+            $('#total-records').text('12345');
+            
+            // Create charts
+            const ingestionRateChart = new Chart(document.getElementById('ingestion-rate-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: timestamps,
+                    datasets: [{
+                        label: 'Ingestion Rate',
+                        data: ingestionRates,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+            
+            const kafkaLagChart = new Chart(document.getElementById('kafka-lag-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: timestamps,
+                    datasets: [{
+                        label: 'Kafka Lag',
+                        data: kafkaLags,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+            
+            const partitionLagChart = new Chart(document.getElementById('partition-lag-chart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: partitions,
+                    datasets: [{
+                        label: 'Partition Lag',
+                        data: partitionLags,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+            
+            // Refresh data every 10 seconds
+            setInterval(function() {
+                // In a real application, this would fetch data from the server
+                // For now, we'll just update with random values
+                const newIngestionRate = Math.floor(Math.random() * 30) + 50;
+                const newKafkaLag = Math.floor(Math.random() * 10);
+                
+                // Update metrics
+                $('#kafka-lag').text(newKafkaLag);
+                $('#ingestion-rate').text(newIngestionRate);
+                $('#total-records').text(parseInt($('#total-records').text()) + newIngestionRate);
+                
+                // Update charts
+                ingestionRateChart.data.labels.shift();
+                ingestionRateChart.data.labels.push(new Date().toLocaleTimeString());
+                ingestionRateChart.data.datasets[0].data.shift();
+                ingestionRateChart.data.datasets[0].data.push(newIngestionRate);
+                ingestionRateChart.update();
+                
+                kafkaLagChart.data.labels.shift();
+                kafkaLagChart.data.labels.push(new Date().toLocaleTimeString());
+                kafkaLagChart.data.datasets[0].data.shift();
+                kafkaLagChart.data.datasets[0].data.push(newKafkaLag);
+                kafkaLagChart.update();
+                
+                // Update partition lag chart
+                for (let i = 0; i < partitionLags.length; i++) {
+                    partitionLagChart.data.datasets[0].data[i] = Math.floor(Math.random() * 10);
+                }
+                partitionLagChart.update();
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
