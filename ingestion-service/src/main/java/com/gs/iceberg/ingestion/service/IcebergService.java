@@ -137,10 +137,19 @@ public class IcebergService {
                 message.put("id", java.util.UUID.randomUUID().toString());
             }
             
-            List<Map<String, Object>> data = new ArrayList<>();
-            data.add(message);
+            StructType schema = createSchema(message);
+            List<Row> rows = new ArrayList<>();
             
-            Dataset<Row> df = sparkSession.createDataFrame(data, createSchema(message));
+            Object[] values = new Object[schema.fields().length];
+            for (int i = 0; i < schema.fields().length; i++) {
+                String fieldName = schema.fields()[i].name();
+                values[i] = message.getOrDefault(fieldName, null);
+            }
+            
+            Row row = org.apache.spark.sql.RowFactory.create(values);
+            rows.add(row);
+            
+            Dataset<Row> df = sparkSession.createDataFrame(rows, schema);
             
             String tablePath = storageConfig.getStoragePath() + "/" + tableName;
             
