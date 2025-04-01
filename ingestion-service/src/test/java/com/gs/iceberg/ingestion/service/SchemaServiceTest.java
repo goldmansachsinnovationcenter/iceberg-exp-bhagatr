@@ -7,7 +7,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,12 +33,37 @@ public class SchemaServiceTest {
         testSchema.setName("TestSchema");
         testSchema.setDescription("Test schema for unit tests");
         
-        Map<String, String> fields = new HashMap<>();
-        fields.put("id", "string");
-        fields.put("name", "string");
-        fields.put("age", "integer");
-        fields.put("active", "boolean");
-        fields.put("timestamp", "timestamp");
+        List<MessageSchema.FieldDefinition> fields = new ArrayList<>();
+        
+        MessageSchema.FieldDefinition idField = new MessageSchema.FieldDefinition();
+        idField.setName("id");
+        idField.setType("string");
+        idField.setRequired(true);
+        fields.add(idField);
+        
+        MessageSchema.FieldDefinition nameField = new MessageSchema.FieldDefinition();
+        nameField.setName("name");
+        nameField.setType("string");
+        nameField.setRequired(true);
+        fields.add(nameField);
+        
+        MessageSchema.FieldDefinition ageField = new MessageSchema.FieldDefinition();
+        ageField.setName("age");
+        ageField.setType("integer");
+        ageField.setRequired(true);
+        fields.add(ageField);
+        
+        MessageSchema.FieldDefinition activeField = new MessageSchema.FieldDefinition();
+        activeField.setName("active");
+        activeField.setType("boolean");
+        activeField.setRequired(true);
+        fields.add(activeField);
+        
+        MessageSchema.FieldDefinition timestampField = new MessageSchema.FieldDefinition();
+        timestampField.setName("timestamp");
+        timestampField.setType("timestamp");
+        timestampField.setRequired(true);
+        fields.add(timestampField);
         
         testSchema.setFields(fields);
     }
