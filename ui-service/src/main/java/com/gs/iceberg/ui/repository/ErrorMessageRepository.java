@@ -45,5 +45,5 @@ public interface ErrorMessageRepository extends JpaRepository<ErrorMessage, Long
      * @return The number of deleted error messages
      */
     @Query("DELETE FROM ErrorMessage e WHERE e.expiryTime < ?1")
-    int deleteExpiredMessages(LocalDateTime expiryTime);
+    int deleteByExpiryTimeBefore(LocalDateTime expiryTime);
 }

@@ -10,8 +10,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Kafka consumer for processing JSON messages.
  * Validates messages against the schema and stores them in HDFS/S3 using Iceberg.
+ * Uses Kerberos keytab file based authentication for Kafka.
  */
 @Component
 @Slf4j
@@ -28,7 +29,7 @@ public class KafkaConsumer {
     private final ObjectMapper objectMapper;
     private final SchemaService schemaService;
     private final IcebergService icebergService;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ErrorProducer errorProducer;
     private final MeterRegistry meterRegistry;
     
     private final Counter messagesReadCounter;
@@ -36,16 +37,19 @@ public class KafkaConsumer {
     private final Counter invalidMessagesCounter;
     private final Timer processingTimer;
     
+    @Value("${kafka.consumer-rate:100}")
+    private int consumerRate;
+    
     @Autowired
     public KafkaConsumer(ObjectMapper objectMapper, 
                          SchemaService schemaService,
                          IcebergService icebergService,
-                         KafkaTemplate<String, String> kafkaTemplate,
+                         ErrorProducer errorProducer,
                          MeterRegistry meterRegistry) {
         this.objectMapper = objectMapper;
         this.schemaService = schemaService;
         this.icebergService = icebergService;
-        this.kafkaTemplate = kafkaTemplate;
+        this.errorProducer = errorProducer;
         this.meterRegistry = meterRegistry;
         
         this.messagesReadCounter = Counter.builder("kafka.messages.read")
@@ -60,6 +64,8 @@ public class KafkaConsumer {
         this.processingTimer = Timer.builder("kafka.messages.processing.time")
                 .description("Time taken to process messages")
                 .register(meterRegistry);
+        
+        log.info("Kafka consumer initialized with rate: {} messages/minute", consumerRate);
     }
     
     /**
@@ -69,7 +75,8 @@ public class KafkaConsumer {
      * 
      * @param message The JSON message from Kafka
      */
-    @KafkaListener(topics = "${kafka.topic}", groupId = "${kafka.consumer-group}")
+    @KafkaListener(topics = "${kafka.topic}", groupId = "${kafka.consumer-group}", 
+                  properties = {"max.poll.records=${kafka.consumer-rate}"})
     public void processMessage(String message) {
         Timer.Sample sample = Timer.start(meterRegistry);
         messagesReadCounter.increment();
@@ -108,41 +115,9 @@ public class KafkaConsumer {
         invalidMessagesCounter.increment();
         log.warn("Invalid message: {}", errorReason);
         
-        try {
-            ErrorMessage errorMessage = new ErrorMessage(message, errorReason);
-            String errorJson = objectMapper.writeValueAsString(errorMessage);
-            
-            kafkaTemplate.send("error-queue", errorJson);
-            log.debug("Message pushed to error queue");
-        } catch (JsonProcessingException e) {
-            log.error("Error creating error message", e);
-        }
-    }
-    
-    /**
-     * Represents an error message for the error queue.
-     */
-    private static class ErrorMessage {
-        private final String originalMessage;
-        private final String errorReason;
-        private final long timestamp;
-        
-        public ErrorMessage(String originalMessage, String errorReason) {
-            this.originalMessage = originalMessage;
-            this.errorReason = errorReason;
-            this.timestamp = System.currentTimeMillis();
-        }
-        
-        public String getOriginalMessage() {
-            return originalMessage;
-        }
-        
-        public String getErrorReason() {
-            return errorReason;
-        }
-        
-        public long getTimestamp() {
-            return timestamp;
+        boolean sent = errorProducer.sendErrorMessage(message, errorReason);
+        if (!sent) {
+            log.error("Failed to send message to error queue: {}", errorReason);
         }
     }
 }

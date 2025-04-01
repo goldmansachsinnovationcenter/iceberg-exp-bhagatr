@@ -85,6 +85,54 @@ public class KafkaConfig {
      * This is required for Kafka to authenticate with Kerberos.
      */
     private String createJaasConfigFile() {
-        return "/tmp/kafka_jaas.conf";
+        try {
+            String jaasPath = "/tmp/kafka_jaas.conf";
+            java.nio.file.Path path = java.nio.file.Paths.get(jaasPath);
+            
+            StringBuilder jaasConfig = new StringBuilder();
+            jaasConfig.append("KafkaClient {\n");
+            jaasConfig.append("  com.sun.security.auth.module.Krb5LoginModule required\n");
+            jaasConfig.append("  useKeyTab=true\n");
+            jaasConfig.append("  storeKey=true\n");
+            jaasConfig.append("  keyTab=\"").append(keytabPath).append("\"\n");
+            jaasConfig.append("  principal=\"").append(principal).append("\";\n");
+            jaasConfig.append("};");
+            
+            java.nio.file.Files.write(path, jaasConfig.toString().getBytes());
+            return jaasPath;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create JAAS config file", e);
+        }
+    }
+    
+    /**
+     * Creates a Kafka producer factory with the configured properties.
+     * Used for sending messages to the error queue.
+     */
+    @Bean
+    public org.springframework.kafka.core.ProducerFactory<String, String> producerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(org.apache.kafka.clients.producer.ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, 
+                 org.apache.kafka.common.serialization.StringSerializer.class);
+        props.put(org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, 
+                 org.apache.kafka.common.serialization.StringSerializer.class);
+        
+        if (SecurityProtocol.SASL_PLAINTEXT.name().equals(securityProtocol) || 
+            SecurityProtocol.SASL_SSL.name().equals(securityProtocol)) {
+            props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            props.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
+            props.put(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
+        }
+        
+        return new org.springframework.kafka.core.DefaultKafkaProducerFactory<>(props);
+    }
+    
+    /**
+     * Creates a Kafka template for sending messages to Kafka.
+     */
+    @Bean
+    public org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate() {
+        return new org.springframework.kafka.core.KafkaTemplate<>(producerFactory());
     }
 }

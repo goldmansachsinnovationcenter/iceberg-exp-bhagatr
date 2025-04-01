@@ -141,7 +141,51 @@ public class ErrorMessageService {
     public void purgeExpiredMessages() {
         log.info("Purging expired error messages");
         LocalDateTime now = LocalDateTime.now();
-        int deletedCount = errorMessageRepository.deleteExpiredMessages(now);
+        int deletedCount = errorMessageRepository.deleteByExpiryTimeBefore(now);
         log.info("Purged {} expired error messages", deletedCount);
+    }
+    
+    /**
+     * Reprocesses all error messages with a specific status.
+     *
+     * @param status The status of the error messages to reprocess
+     * @return The number of reprocessed messages
+     */
+    @Transactional
+    public int reprocessErrorMessagesByStatus(String status) {
+        log.info("Reprocessing error messages with status: {}", status);
+        List<ErrorMessage> errorMessages = errorMessageRepository.findByStatus(status);
+        
+        int count = 0;
+        for (ErrorMessage errorMessage : errorMessages) {
+            if (reprocessErrorMessage(errorMessage.getId())) {
+                count++;
+            }
+        }
+        
+        log.info("Reprocessed {} error messages", count);
+        return count;
+    }
+    
+    /**
+     * Discards all error messages with a specific status.
+     *
+     * @param status The status of the error messages to discard
+     * @return The number of discarded messages
+     */
+    @Transactional
+    public int discardErrorMessagesByStatus(String status) {
+        log.info("Discarding error messages with status: {}", status);
+        List<ErrorMessage> errorMessages = errorMessageRepository.findByStatus(status);
+        
+        int count = 0;
+        for (ErrorMessage errorMessage : errorMessages) {
+            if (discardErrorMessage(errorMessage.getId())) {
+                count++;
+            }
+        }
+        
+        log.info("Discarded {} error messages", count);
+        return count;
     }
 }
