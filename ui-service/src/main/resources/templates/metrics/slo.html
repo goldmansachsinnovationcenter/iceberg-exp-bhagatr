@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLO/SLI Monitoring - Kafka-Iceberg Application</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        .slo-card {
+            margin-bottom: 20px;
+        }
+        .slo-status {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-healthy {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-warning {
+            background-color: #FF9800;
+            color: white;
+        }
+        .status-critical {
+            background-color: #F44336;
+            color: white;
+        }
+        .progress-container {
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e0e0e0;
+        }
+        .progress-value {
+            height: 100%;
+            border-radius: 5px;
+        }
+        .progress-healthy {
+            background-color: #4CAF50;
+        }
+        .progress-warning {
+            background-color: #FF9800;
+        }
+        .progress-critical {
+            background-color: #F44336;
+        }
+    </style>
+</head>
+<body>
+    <nav class="blue darken-3">
+        <div class="nav-wrapper container">
+            <a href="#" class="brand-logo">Kafka-Iceberg</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <li><a th:href="@{/}">Home</a></li>
+                <li><a th:href="@{/schemas}">Message Schemas</a></li>
+                <li><a th:href="@{/kafka-configs}">Kafka Configs</a></li>
+                <li><a th:href="@{/storage-configs}">Storage Configs</a></li>
+                <li><a th:href="@{/query}">Query</a></li>
+                <li><a th:href="@{/error-messages}">Error Queue</a></li>
+                <li><a th:href="@{/metrics}">Metrics</a></li>
+                <li class="active"><a th:href="@{/metrics/slo}">SLO/SLIs</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="section">
+            <h3 class="center-align">SLO/SLI Monitoring</h3>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">SLO Summary</span>
+                            <div class="row">
+                                <div class="col s12 m4">
+                                    <div class="center-align">
+                                        <h5>Healthy</h5>
+                                        <div class="circle-container">
+                                            <div class="circle green darken-1" id="healthy-count">3</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col s12 m4">
+                                    <div class="center-align">
+                                        <h5>Warning</h5>
+                                        <div class="circle-container">
+                                            <div class="circle orange" id="warning-count">1</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col s12 m4">
+                                    <div class="center-align">
+                                        <h5>Critical</h5>
+                                        <div class="circle-container">
+                                            <div class="circle red" id="critical-count">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">SLO Trends</span>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="slo-trend-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12 m6">
+                    <div class="card slo-card">
+                        <div class="card-content">
+                            <div class="card-title">Kafka Lag SLO</div>
+                            <div class="row">
+                                <div class="col s8">
+                                    <p>Maximum Kafka lag should be less than 100 messages</p>
+                                </div>
+                                <div class="col s4 right-align">
+                                    <span class="slo-status status-healthy">Healthy</span>
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-value progress-healthy" style="width: 15%;"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s6">
+                                    <span>Current: 15 messages</span>
+                                </div>
+                                <div class="col s6 right-align">
+                                    <span>Target: &lt; 100 messages</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col s12 m6">
+                    <div class="card slo-card">
+                        <div class="card-content">
+                            <div class="card-title">Ingestion Rate SLO</div>
+                            <div class="row">
+                                <div class="col s8">
+                                    <p>Minimum ingestion rate should be at least 50 messages/minute</p>
+                                </div>
+                                <div class="col s4 right-align">
+                                    <span class="slo-status status-healthy">Healthy</span>
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-value progress-healthy" style="width: 120%;"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s6">
+                                    <span>Current: 60 messages/minute</span>
+                                </div>
+                                <div class="col s6 right-align">
+                                    <span>Target: &gt; 50 messages/minute</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12 m6">
+                    <div class="card slo-card">
+                        <div class="card-content">
+                            <div class="card-title">Error Rate SLO</div>
+                            <div class="row">
+                                <div class="col s8">
+                                    <p>Error rate should be less than 1% of total messages</p>
+                                </div>
+                                <div class="col s4 right-align">
+                                    <span class="slo-status status-warning">Warning</span>
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-value progress-warning" style="width: 80%;"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s6">
+                                    <span>Current: 0.8%</span>
+                                </div>
+                                <div class="col s6 right-align">
+                                    <span>Target: &lt; 1%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col s12 m6">
+                    <div class="card slo-card">
+                        <div class="card-content">
+                            <div class="card-title">Query Response Time SLO</div>
+                            <div class="row">
+                                <div class="col s8">
+                                    <p>95th percentile query response time should be less than 500ms</p>
+                                </div>
+                                <div class="col s4 right-align">
+                                    <span class="slo-status status-healthy">Healthy</span>
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-value progress-healthy" style="width: 60%;"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s6">
+                                    <span>Current: 300ms</span>
+                                </div>
+                                <div class="col s6 right-align">
+                                    <span>Target: &lt; 500ms</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col s12">
+                    <div class="card">
+                        <div class="card-content">
+                            <span class="card-title">All SLOs</span>
+                            <div class="row" th:if="${slos != null && !slos.isEmpty()}">
+                                <div class="col s12">
+                                    <table class="striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Description</th>
+                                                <th>Target</th>
+                                                <th>Actual Value</th>
+                                                <th>Status</th>
+                                                <th>Last Updated</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="slo : ${slos}">
+                                                <td th:text="${slo.name}"></td>
+                                                <td th:text="${slo.description}"></td>
+                                                <td th:text="${slo.target}"></td>
+                                                <td th:text="${slo.actualValue}"></td>
+                                                <td>
+                                                    <span th:class="${'slo-status ' + (slo.status == 'HEALTHY' ? 'status-healthy' : (slo.status == 'WARNING' ? 'status-warning' : 'status-critical'))}" 
+                                                          th:text="${slo.status}"></span>
+                                                </td>
+                                                <td th:text="${#temporals.format(slo.timestamp, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row" th:if="${slos == null || slos.isEmpty()}">
+                                <div class="col s12">
+                                    <p>No SLOs found.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer blue darken-3">
+        <div class="container">
+            <div class="row">
+                <div class="col s12">
+                    <h5 class="white-text">Kafka-Iceberg Application</h5>
+                    <p class="grey-text text-lighten-4">A tool for processing JSON messages from Kafka and storing them in HDFS/S3 using Iceberg.</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <div class="container">
+                © 2025 Goldman Sachs Innovation Center
+            </div>
+        </div>
+    </footer>
+
+    <div class="fixed-action-btn">
+        <a class="btn-floating btn-large red">
+            <i class="large material-icons">refresh</i>
+        </a>
+        <ul>
+            <li><a th:href="@{/metrics/slo}" class="btn-floating green"><i class="material-icons">refresh</i></a></li>
+            <li><a href="#" class="btn-floating blue" id="export-slos"><i class="material-icons">file_download</i></a></li>
+        </ul>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('.fixed-action-btn').floatingActionButton();
+            
+            // Mock data for SLO trend chart
+            const timestamps = Array.from({length: 10}, (_, i) => {
+                const date = new Date();
+                date.setHours(date.getHours() - (10 - i));
+                return date.toLocaleTimeString();
+            });
+            
+            const healthyCount = [3, 3, 4, 4, 4, 3, 3, 3, 3, 3];
+            const warningCount = [1, 1, 0, 0, 0, 1, 1, 1, 1, 1];
+            const criticalCount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            
+            // Create SLO trend chart
+            const sloTrendChart = new Chart(document.getElementById('slo-trend-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: timestamps,
+                    datasets: [
+                        {
+                            label: 'Healthy',
+                            data: healthyCount,
+                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Warning',
+                            data: warningCount,
+                            backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                            borderColor: 'rgba(255, 152, 0, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Critical',
+                            data: criticalCount,
+                            backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                            borderColor: 'rgba(244, 67, 54, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                stepSize: 1
+                            }
+                        }]
+                    }
+                }
+            });
+            
+            // Refresh data every 30 seconds
+            setInterval(function() {
+                // In a real application, this would fetch data from the server
+                // For now, we'll just update with random values
+                const newHealthy = Math.floor(Math.random() * 2) + 2; // 2-3
+                const newWarning = Math.floor(Math.random() * 2); // 0-1
+                const newCritical = Math.floor(Math.random() * 2); // 0-1
+                
+                // Update summary counts
+                $('#healthy-count').text(newHealthy);
+                $('#warning-count').text(newWarning);
+                $('#critical-count').text(newCritical);
+                
+                // Update SLO trend chart
+                sloTrendChart.data.labels.shift();
+                sloTrendChart.data.labels.push(new Date().toLocaleTimeString());
+                
+                sloTrendChart.data.datasets[0].data.shift();
+                sloTrendChart.data.datasets[0].data.push(newHealthy);
+                
+                sloTrendChart.data.datasets[1].data.shift();
+                sloTrendChart.data.datasets[1].data.push(newWarning);
+                
+                sloTrendChart.data.datasets[2].data.shift();
+                sloTrendChart.data.datasets[2].data.push(newCritical);
+                
+                sloTrendChart.update();
+                
+                // Update individual SLOs with random values
+                updateSLO('Kafka Lag SLO', Math.floor(Math.random() * 150), 100, 'less');
+                updateSLO('Ingestion Rate SLO', Math.floor(Math.random() * 30) + 40, 50, 'more');
+                updateSLO('Error Rate SLO', (Math.random() * 1.5).toFixed(1), 1, 'less');
+                updateSLO('Query Response Time SLO', Math.floor(Math.random() * 600) + 200, 500, 'less');
+            }, 30000);
+        });
+        
+        // Update an individual SLO card
+        function updateSLO(title, value, target, comparison) {
+            const card = $(`.card-title:contains('${title}')`).closest('.card');
+            const progressBar = card.find('.progress-value');
+            const statusSpan = card.find('.slo-status');
+            const currentSpan = card.find('.col:first-child span');
+            
+            let percentage, status, statusClass, progressClass;
+            
+            if (comparison === 'less') {
+                percentage = (value / target) * 100;
+                
+                if (value < target * 0.7) {
+                    status = 'Healthy';
+                    statusClass = 'status-healthy';
+                    progressClass = 'progress-healthy';
+                } else if (value < target) {
+                    status = 'Warning';
+                    statusClass = 'status-warning';
+                    progressClass = 'progress-warning';
+                } else {
+                    status = 'Critical';
+                    statusClass = 'status-critical';
+                    progressClass = 'progress-critical';
+                }
+            } else { // more
+                percentage = (value / target) * 100;
+                
+                if (value > target * 1.2) {
+                    status = 'Healthy';
+                    statusClass = 'status-healthy';
+                    progressClass = 'progress-healthy';
+                } else if (value > target) {
+                    status = 'Warning';
+                    statusClass = 'status-warning';
+                    progressClass = 'progress-warning';
+                } else {
+                    status = 'Critical';
+                    statusClass = 'status-critical';
+                    progressClass = 'progress-critical';
+                }
+            }
+            
+            // Update the UI
+            progressBar.attr('class', `progress-value ${progressClass}`);
+            progressBar.css('width', `${percentage}%`);
+            
+            statusSpan.attr('class', `slo-status ${statusClass}`);
+            statusSpan.text(status);
+            
+            // Update the current value
+            if (title === 'Error Rate SLO') {
+                currentSpan.text(`Current: ${value}%`);
+            } else if (title === 'Ingestion Rate SLO') {
+                currentSpan.text(`Current: ${value} messages/minute`);
+            } else if (title === 'Query Response Time SLO') {
+                currentSpan.text(`Current: ${value}ms`);
+            } else {
+                currentSpan.text(`Current: ${value} messages`);
+            }
+        }
+    </script>
+</body>
+</html>
