@@ -1,0 +1,92 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'jacoco'
+    id 'org.springframework.boot' version '2.7.3'
+    id 'io.spring.dependency-management' version '1.0.13.RELEASE'
+}
+
+group = 'com.gs.iceberg'
+version = '0.1.0'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://packages.confluent.io/maven/' }
+    maven { url "https://repository.apache.org/content/repositories/snapshots" }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    
+    // Kafka
+    implementation 'org.apache.kafka:kafka-clients:3.3.1'
+    implementation 'org.springframework.kafka:spring-kafka'
+    
+    // Spark
+    implementation 'org.apache.spark:spark-core_2.12:3.3.1'
+    implementation 'org.apache.spark:spark-sql_2.12:3.3.1'
+    implementation 'org.apache.spark:spark-streaming_2.12:3.3.1'
+    implementation 'org.apache.spark:spark-streaming-kafka-0-10_2.12:3.3.1'
+    
+    // Iceberg
+    implementation 'org.apache.iceberg:iceberg-core:1.2.1'
+    implementation 'org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:1.2.1'
+    
+    // Hadoop
+    implementation 'org.apache.hadoop:hadoop-client:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-common:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-hdfs:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-aws:3.3.4'
+    
+    // AWS
+    implementation 'software.amazon.awssdk:s3:2.17.276'
+    
+    // Kerberos
+    implementation 'org.apache.kerby:kerb-simplekdc:2.0.2'
+    
+    // Metrics
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.9.4'
+    
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+    testImplementation 'org.mockito:mockito-core:4.8.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:4.8.0'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+application {
+    mainClass = 'com.gs.iceberg.ingestion.IngestionServiceApplication'
+}
+
+bootJar {
+    archiveFileName = 'ingestion-service.jar'
+}

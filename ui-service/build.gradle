@@ -1,0 +1,98 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'jacoco'
+    id 'org.springframework.boot' version '2.7.3'
+    id 'io.spring.dependency-management' version '1.0.13.RELEASE'
+}
+
+group = 'com.gs.iceberg'
+version = '0.1.0'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://packages.confluent.io/maven/' }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    
+    // H2 Database
+    implementation 'com.h2database:h2'
+    
+    // Kafka
+    implementation 'org.apache.kafka:kafka-clients:3.3.1'
+    implementation 'org.springframework.kafka:spring-kafka'
+    
+    // Iceberg
+    implementation 'org.apache.iceberg:iceberg-core:1.2.1'
+    implementation 'org.apache.iceberg:iceberg-api:1.2.1'
+    
+    // Hadoop
+    implementation 'org.apache.hadoop:hadoop-client:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-common:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-hdfs:3.3.4'
+    implementation 'org.apache.hadoop:hadoop-aws:3.3.4'
+    
+    // AWS
+    implementation 'software.amazon.awssdk:s3:2.17.276'
+    
+    // Kerberos
+    implementation 'org.apache.kerby:kerb-simplekdc:2.0.2'
+    
+    // Metrics
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.9.4'
+    
+    // Frontend
+    implementation 'org.webjars:bootstrap:5.2.0'
+    implementation 'org.webjars:jquery:3.6.1'
+    implementation 'org.webjars:webjars-locator-core'
+    implementation 'org.webjars.npm:@material-ui/core:4.12.4'
+    implementation 'org.webjars.npm:react:18.2.0'
+    implementation 'org.webjars.npm:react-dom:18.2.0'
+    
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+    testImplementation 'org.mockito:mockito-core:4.8.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:4.8.0'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+application {
+    mainClass = 'com.gs.iceberg.ui.UiServiceApplication'
+}
+
+bootJar {
+    archiveFileName = 'ui-service.jar'
+}
