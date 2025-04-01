@@ -1,0 +1,2 @@
+rootProject.name = 'iceberg-exp-bhagatr'
+include 'ingestion-service', 'ui-service', 'common'
