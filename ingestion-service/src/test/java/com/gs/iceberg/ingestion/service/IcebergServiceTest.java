@@ -41,7 +41,6 @@ public class IcebergServiceTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         
-        when(sparkSession.sparkSession()).thenReturn(sparkSession);
         
         when(storageConfig.getType()).thenReturn("HDFS");
         when(storageConfig.getStoragePath()).thenReturn("hdfs://localhost:9000/iceberg");
@@ -56,7 +55,7 @@ public class IcebergServiceTest {
         message.put("active", true);
         message.put("timestamp", "2025-01-01T12:00:00Z");
         
-        when(sparkSession.createDataFrame(anyList(), any())).thenReturn(dataset);
+        when(sparkSession.createDataFrame(anyList(), any(org.apache.spark.sql.types.StructType.class))).thenReturn(dataset);
         when(dataset.write()).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
         when(dataset.write().format(anyString())).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
         when(dataset.write().format(anyString()).mode(anyString())).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
@@ -77,18 +76,18 @@ public class IcebergServiceTest {
         message.put("active", true);
         message.put("timestamp", "2025-01-01T12:00:00Z");
         
-        when(sparkSession.createDataFrame(anyList(), any())).thenThrow(new RuntimeException("Test exception"));
+        when(sparkSession.createDataFrame(anyList(), any(org.apache.spark.sql.types.StructType.class))).thenThrow(new RuntimeException("Test exception"));
         
         icebergService.writeToIceberg(message);
         
-        verify(sparkSession).createDataFrame(anyList(), any());
+        verify(sparkSession).createDataFrame(anyList(), any(org.apache.spark.sql.types.StructType.class));
     }
 
     @Test
     public void testInitializeIcebergTable() {
         when(sparkSession.catalog()).thenReturn(mock(org.apache.spark.sql.catalog.Catalog.class));
         when(sparkSession.catalog().tableExists(anyString())).thenReturn(false);
-        when(sparkSession.createDataFrame(anyList(), any())).thenReturn(dataset);
+        when(sparkSession.createDataFrame(anyList(), any(org.apache.spark.sql.types.StructType.class))).thenReturn(dataset);
         when(dataset.write()).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
         when(dataset.write().format(anyString())).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
         when(dataset.write().format(anyString()).mode(anyString())).thenReturn(mock(org.apache.spark.sql.DataFrameWriter.class));
